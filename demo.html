@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Forest Guardian - Demo</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 20px;
+            font-family: 'Courier New', monospace;
+            background: #2c5530;
+            color: white;
+        }
+        .demo-container {
+            max-width: 1200px;
+            margin: 0 auto;
+            text-align: center;
+        }
+        .demo-title {
+            font-size: 2.5rem;
+            color: #7dd87d;
+            margin-bottom: 10px;
+        }
+        .demo-subtitle {
+            font-size: 1.2rem;
+            color: #b8e6b8;
+            margin-bottom: 30px;
+        }
+        .demo-info {
+            background: rgba(0, 0, 0, 0.3);
+            border: 2px solid #7dd87d;
+            border-radius: 10px;
+            padding: 20px;
+            margin: 20px 0;
+            text-align: left;
+        }
+        .demo-info h3 {
+            color: #7dd87d;
+            margin-top: 0;
+        }
+        .demo-info ul {
+            margin: 10px 0;
+            padding-left: 20px;
+        }
+        .demo-info li {
+            margin: 5px 0;
+        }
+        .demo-button {
+            background: #7dd87d;
+            color: #2c5530;
+            border: none;
+            padding: 15px 30px;
+            font-size: 1.1rem;
+            font-weight: bold;
+            border-radius: 8px;
+            cursor: pointer;
+            margin: 10px;
+            font-family: 'Courier New', monospace;
+        }
+        .demo-button:hover {
+            background: #8de88d;
+            transform: translateY(-2px);
+        }
+        .demo-note {
+            background: rgba(255, 193, 7, 0.2);
+            border: 1px solid #ffc107;
+            border-radius: 5px;
+            padding: 15px;
+            margin: 20px 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="demo-container">
+        <h1 class="demo-title">🌲 Forest Guardian Demo</h1>
+        <p class="demo-subtitle">2D Pixel Action Platformer với Mô phỏng Nông trại và Giáo dục Môi trường</p>
+        
+        <div class="demo-info">
+            <h3>🎮 Cách chơi:</h3>
+            <ul>
+                <li><strong>WASD</strong> hoặc <strong>Arrow Keys</strong>: Di chuyển nhân vật</li>
+                <li><strong>Mouse Click</strong>: Trồng cây, tưới nước, bón phân</li>
+                <li><strong>1, 2, 3</strong>: Chuyển đổi công cụ (Plant, Water, Fertilize)</li>
+                <li><strong>ESC</strong>: Tạm dừng game</li>
+            </ul>
+        </div>
+        
+        <div class="demo-info">
+            <h3>🌱 Mục tiêu:</h3>
+            <ul>
+                <li>Trồng cây trên các ô đất (màu nâu)</li>
+                <li>Tưới nước và bón phân để cây tăng trưởng nhanh</li>
+                <li>Thu thập Carbon Credits khi cây trưởng thành</li>
+                <li>Phục hồi sức khỏe khu vực bằng cách hấp thụ CO₂</li>
+            </ul>
+        </div>
+        
+        <div class="demo-info">
+            <h3>💎 Hệ thống tài nguyên:</h3>
+            <ul>
+                <li><strong>Energy Orbs</strong>: Dùng để mua hạt giống (10), tưới nước (5), bón phân (15)</li>
+                <li><strong>Carbon Credits</strong>: Thu được khi cây trưởng thành</li>
+                <li><strong>CO₂ Absorbed</strong>: Lượng CO₂ đã hấp thụ</li>
+            </ul>
+        </div>
+        
+        <div class="demo-note">
+            <strong>⚠️ Lưu ý:</strong> Đây là phiên bản demo với graphics đơn giản. Game sử dụng các hình khối màu sắc để đại diện cho các đối tượng trong game.
+        </div>
+        
+        <button class="demo-button" onclick="startGame()">🎮 Bắt đầu Game</button>
+        <button class="demo-button" onclick="showInstructions()">📖 Hướng dẫn chi tiết</button>
+    </div>
+
+    <script>
+        function startGame() {
+            // Redirect to the React app
+            window.location.href = '/';
+        }
+        
+        function showInstructions() {
+            alert(`🌲 FOREST GUARDIAN - HƯỚNG DẪN CHI TIẾT
+
+🎯 MỤC TIÊU CHÍNH:
+- Phục hồi hệ sinh thái bằng cách trồng cây
+- Hấp thụ CO₂ để cải thiện chất lượng không khí
+- Thu thập Carbon Credits để mở rộng khu vực
+
+🎮 ĐIỀU KHIỂN:
+- WASD/Arrow Keys: Di chuyển nhân vật
+- Mouse Click: Tương tác với đất/cây
+- 1: Công cụ trồng cây
+- 2: Công cụ tưới nước  
+- 3: Công cụ bón phân
+- ESC: Tạm dừng
+
+🌱 HỆ THỐNG CÂY TRỒNG:
+- Chỉ trồng được trên đất (màu nâu)
+- Cây có 4 giai đoạn: Hạt → Mầm → Non → Trưởng thành
+- Tưới nước và bón phân tăng tốc độ tăng trưởng
+- Cây trưởng thành tự động thu hoạch và cho Carbon Credits
+
+🌍 MÔI TRƯỜNG:
+- Nhiệt độ, độ ẩm, pH ảnh hưởng đến tăng trưởng cây
+- Thời tiết thay đổi theo thời gian
+- Các sự kiện môi trường ngẫu nhiên
+
+💎 TÀI NGUYÊN:
+- Energy Orbs: Tiền tệ chính
+- Carbon Credits: Thu được từ cây trưởng thành
+- CO₂ Absorbed: Tiến độ phục hồi khu vực
+
+🎨 GRAPHICS:
+- Đất: Màu nâu
+- Cỏ: Màu xanh lá
+- Đá: Màu xám
+- Cây: Từ nâu đến xanh đậm
+- Nhân vật: Màu xanh lá
+
+Chúc bạn chơi vui vẻ và bảo vệ môi trường! 🌱`);
+        }
+    </script>
+</body>
+</html> 

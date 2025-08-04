@@ -1,0 +1,54 @@
+.App {
+  width: 100vw;
+  height: 100vh;
+  position: relative;
+}
+
+.game-container {
+  width: 100%;
+  height: 100%;
+  position: relative;
+}
+
+.pause-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.7);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
+}
+
+.pause-menu {
+  background: #2c5530;
+  border: 2px solid #4a7c59;
+  border-radius: 8px;
+  padding: 20px;
+  text-align: center;
+  color: white;
+}
+
+.pause-menu h2 {
+  margin: 0 0 20px 0;
+  color: #7dd87d;
+}
+
+.pause-menu button {
+  background: #4a7c59;
+  border: none;
+  color: white;
+  padding: 10px 20px;
+  margin: 5px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-family: 'Courier New', monospace;
+  font-size: 14px;
+}
+
+.pause-menu button:hover {
+  background: #5a8c69;
+} 
