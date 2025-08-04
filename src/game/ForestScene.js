@@ -25,10 +25,7 @@ export class ForestScene extends Phaser.Scene {
     this.updateCallback = null;
     this.pauseCallback = null;
     this.currentTool = 'plant';
-    this.tickTime = 0;
     this.tickInterval = 1000;
-    this.lastDay = TimeManager.getCurrentDay();
-    this.lastEvent = null;
     this.tickCount = 0;
     this.isDragging = false;
   }
@@ -53,7 +50,7 @@ export class ForestScene extends Phaser.Scene {
 
     // Camera Setup
     const mapSize = mapTiles * tileSize;
-    this.cameras.main.setZoom(1);
+    this.cameras.main.setZoom(1); // Giữ nguyên zoom 1
     this.cameras.main.setBounds(0, 0, mapSize, mapSize);
 
     this.setupCameraControls();
@@ -65,13 +62,6 @@ export class ForestScene extends Phaser.Scene {
   setupCameraControls() {
     const cam = this.cameras.main;
 
-    // Zoom bằng cuộn chuột
-    // this.input.on('wheel', (pointer, gameObjects, deltaX, deltaY) => {
-    //   cam.zoom -= deltaY * 0.001;
-    //   cam.zoom = Phaser.Math.Clamp(cam.zoom, 0.5, 3);
-    // });
-
-    // Pan bản đồ
     this.input.on('pointerdown', (pointer) => {
       if (pointer.button === 0) {
         this.isDragging = true;
@@ -82,8 +72,8 @@ export class ForestScene extends Phaser.Scene {
 
     this.input.on('pointermove', (pointer) => {
       if (!this.isDragging) return;
-      cam.scrollX -= (pointer.x - this.dragStartX) / cam.zoom;
-      cam.scrollY -= (pointer.y - this.dragStartY) / cam.zoom;
+      cam.scrollX -= (pointer.x - this.dragStartX);
+      cam.scrollY -= (pointer.y - this.dragStartY);
       this.dragStartX = pointer.x;
       this.dragStartY = pointer.y;
     });
@@ -232,9 +222,17 @@ export class ForestScene extends Phaser.Scene {
   }
 
   gameTick() {
+    const disaster = RandomEventManager.getCurrentDisaster();
+    if (disaster) {
+      this.environment.temperature += 0.2;
+      this.environment.humidity -= 0.3;
+      this.environment.pH -= 0.1;
+      this.environment.airQuality -= 0.4; // giảm dần chất lượng không khí
+    }
+
     if (!this.gameData) return;
 
-    this.tickCount = (this.tickCount || 0) + 1;
+    this.tickCount++;
     if (this.tickCount >= 10) {
       this.tickCount = 0;
       TimeManager.nextDay();
@@ -246,8 +244,12 @@ export class ForestScene extends Phaser.Scene {
 
     let totalCarbonAbsorbed = 0;
     this.plants.forEach(plant => {
-      const absorbed = plant.grow(this.environment);
+      let absorbed = plant.grow(this.environment);
+      if (RandomEventManager.getCurrentDisaster()) {
+        absorbed *= 0.6; // giảm 40% hiệu quả
+      }
       totalCarbonAbsorbed += absorbed;
+
 
       if (plant.isMature() && !plant.harvested) {
         plant.harvest();
@@ -270,22 +272,30 @@ export class ForestScene extends Phaser.Scene {
 
   handleNewDay() {
     const currentDay = TimeManager.getCurrentDay();
+
     this.plants.forEach(p => {
       p.watered = false;
       p.fertilized = false;
     });
 
-    const event = RandomEventManager.getRandomEvent(currentDay);
+    const stats = {
+      totalTrees: this.plants.length,
+      treesAlive: this.plants.filter(p => p.stage !== 'dead' && p.status === 'normal').length
+    };
+
+    const event = RandomEventManager.getRandomEvent(currentDay, stats);
     this.lastEvent = event;
 
     if (event) {
       const alivePlants = this.plants.filter(p => p.stage !== 'dead' && p.status === 'normal');
       const numAffected = Math.max(1, Math.floor(alivePlants.length * 0.2));
+
       for (let i = 0; i < numAffected; i++) {
         const idx = Math.floor(Math.random() * alivePlants.length);
         alivePlants[idx].applyDisaster(event);
         alivePlants.splice(idx, 1);
       }
+
       this.showDisasterNotification(event);
     }
 

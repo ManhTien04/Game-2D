@@ -8,30 +8,55 @@ const HUD = ({ gameData, onPause, tool, onToolChange }) => {
     pH: 6.5,
     airQuality: 'Good'
   });
+
   const [currentDay, setCurrentDay] = useState(1);
   const [disasterEvent, setDisasterEvent] = useState(null);
+  const [affectedStats, setAffectedStats] = useState([]);
+  const [disasterOngoing, setDisasterOngoing] = useState(false);
+  const [co2Absorbed, setCo2Absorbed] = useState(1000);
 
-  const healthPercentage = (gameData.areaHealth / 100) * 100;
+  const healthPercentage = Math.min((co2Absorbed / gameData.co2Target) * 100, 100);
 
-  // Listen for environment updates
+  // Hàm đánh giá chất lượng không khí dựa trên CO2 hấp thụ
+  const getAirQualityFromCO2 = (value) => {
+    if (value >= 975) return 'Xuất sắc';
+    if (value >= 850) return 'Tốt';
+    return 'Tệ';
+  };
+
+  // Cập nhật chỉ số môi trường khi nhận event từ game
   useEffect(() => {
     const handleEnvironmentUpdate = (event) => {
       if (event.detail?.environment) {
-        setEnvironmentData(event.detail.environment);
+        setEnvironmentData((prev) => ({
+          ...event.detail.environment,
+          airQuality: getAirQualityFromCO2(co2Absorbed) // Không ép 'Bad' nữa
+        }));
       }
     };
     window.addEventListener('environmentUpdate', handleEnvironmentUpdate);
     return () => {
       window.removeEventListener('environmentUpdate', handleEnvironmentUpdate);
     };
-  }, []);
+  }, [co2Absorbed]);
 
-  // Listen for day and disaster events
+  // Cập nhật airQuality mỗi khi CO2 thay đổi
+  useEffect(() => {
+    setEnvironmentData((prev) => ({
+      ...prev,
+      airQuality: getAirQualityFromCO2(co2Absorbed)
+    }));
+  }, [co2Absorbed]);
+
   useEffect(() => {
     const handleDayEvent = (event) => {
       if (event.detail) {
         setCurrentDay(event.detail.day);
         setDisasterEvent(event.detail.event);
+        if (event.detail.event) {
+          setAffectedStats(['co2', 'health', 'airQuality', 'environment']);
+          setDisasterOngoing(true);
+        }
       }
     };
     window.addEventListener('dayEvent', handleDayEvent);
@@ -40,16 +65,67 @@ const HUD = ({ gameData, onPause, tool, onToolChange }) => {
     };
   }, []);
 
-  // Handle ESC key to pause
+  useEffect(() => {
+    const handleDisasterResolved = () => {
+      setDisasterEvent(null);
+      setAffectedStats([]);
+      setDisasterOngoing(false);
+    };
+    window.addEventListener('disasterResolved', handleDisasterResolved);
+    return () => {
+      window.removeEventListener('disasterResolved', handleDisasterResolved);
+    };
+  }, []);
+
+  // Thiên tai làm giảm chỉ số môi trường mỗi giây
+  useEffect(() => {
+    if (!disasterOngoing) return;
+    const interval = setInterval(() => {
+      setEnvironmentData((prev) => ({
+        temperature: Math.max(prev.temperature - 0.2, 5),
+        humidity: Math.max(prev.humidity - 1, 10),
+        pH: Math.max(prev.pH - 0.05, 4.5),
+        airQuality: getAirQualityFromCO2(co2Absorbed) // Luôn đánh giá lại từ CO2
+      }));
+    }, 1000);
+    return () => clearInterval(interval);
+  }, [disasterOngoing, co2Absorbed]);
+
+  // Thiên tai làm giảm CO2 hấp thụ mỗi 10s
+  useEffect(() => {
+    if (!disasterOngoing) return;
+    const interval = setInterval(() => {
+      setCo2Absorbed((prev) => Math.max(prev - 1, 0));
+    }, 10000);
+    return () => clearInterval(interval);
+  }, [disasterOngoing]);
+
+  // Không có thiên tai → cập nhật CO2 từ game
+  useEffect(() => {
+    if (!disasterOngoing) {
+      setCo2Absorbed(Math.min(gameData.co2Absorbed, 1000));
+    }
+  }, [gameData, disasterOngoing]);
+
+  // ESC để pause
   useEffect(() => {
     const handleKeyDown = (e) => {
       if (e.key === 'Escape') {
-        onPause?.(); // gọi callback để set trạng thái pause
+        onPause?.();
       }
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [onPause]);
+
+  const renderAffected = (key, value, suffix = '', isPercent = false) => {
+    const isAffected = affectedStats.includes(key);
+    return (
+      <span className={`hud-value ${isAffected ? 'affected' : ''}`}>
+        {Math.round(value)}{suffix} {isAffected ? '↓' : ''}
+      </span>
+    );
+  };
 
   return (
     <div className="hud">
@@ -63,17 +139,17 @@ const HUD = ({ gameData, onPause, tool, onToolChange }) => {
           <div className="hud-section">
             <div className="hud-label">🌳 Sức khỏe khu vực</div>
             <div className="health-bar">
-              <div 
-                className="health-fill" 
-                style={{ width: `${healthPercentage}%` }}
-              ></div>
+              <div className="health-fill" style={{ width: `${healthPercentage}%` }}></div>
             </div>
-            <div className="hud-value">{Math.round(gameData.areaHealth)}%</div>
+            {renderAffected('health', healthPercentage, '%', true)}
           </div>
 
           <div className="hud-section">
             <div className="hud-label">🌱 CO₂ Hấp thụ</div>
-            <div className="hud-value">{Math.round(gameData.co2Absorbed)} / {gameData.co2Target}</div>
+            <div className={`hud-value ${affectedStats.includes('co2') ? 'affected' : ''}`}>
+              {co2Absorbed.toFixed(0)} / 1000
+              {affectedStats.includes('co2') && ' ↓'}
+            </div>
           </div>
 
           <div className="hud-section">
@@ -97,31 +173,37 @@ const HUD = ({ gameData, onPause, tool, onToolChange }) => {
           )}
         </div>
 
-        {/* Environment stats */}
         <div className="hud-section">
           <div className="env-title">Environment</div>
           <div className="env-stats">
             <div className="env-stat">
               <span className="env-label">🌡️ Nhiệt độ:</span>
-              <span className="env-value">{environmentData.temperature.toFixed(1)}°C</span>
+              <span className={`env-value ${disasterOngoing ? 'affected' : ''}`}>
+                {environmentData.temperature.toFixed(1)}°C {disasterOngoing && '↓'}
+              </span>
             </div>
             <div className="env-stat">
               <span className="env-label">💧 Độ ẩm:</span>
-              <span className="env-value">{environmentData.humidity.toFixed(0)}%</span>
+              <span className={`env-value ${disasterOngoing ? 'affected' : ''}`}>
+                {environmentData.humidity.toFixed(0)}% {disasterOngoing && '↓'}
+              </span>
             </div>
             <div className="env-stat">
               <span className="env-label">🧪 Độ pH:</span>
-              <span className="env-value">{environmentData.pH.toFixed(1)}</span>
+              <span className={`env-value ${disasterOngoing ? 'affected' : ''}`}>
+                {environmentData.pH.toFixed(1)} {disasterOngoing && '↓'}
+              </span>
             </div>
             <div className="env-stat">
               <span className="env-label">☁️ Chất lượng không khí:</span>
-              <span className="env-value">{environmentData.airQuality}</span>
+              <span className={`env-value ${affectedStats.includes('airQuality') ? 'affected' : ''}`}>
+                {environmentData.airQuality} {affectedStats.includes('airQuality') && '↓'}
+              </span>
             </div>
           </div>
         </div>
       </div>
 
-      {/* Bottom HUD */}
       <div className="hud-bottom">
         <div className="tool-panel">
           <div className={`tool-item${tool === 'plant' ? ' active' : ''}`} onClick={() => onToolChange?.('plant')}>
