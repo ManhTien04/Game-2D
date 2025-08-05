@@ -47,10 +47,9 @@ export class ForestScene extends Phaser.Scene {
     this.tileSize = tileSize;
 
     this.createTileMap();
-
-    // Camera Setup
+//
     const mapSize = mapTiles * tileSize;
-    this.cameras.main.setZoom(1); // Giữ nguyên zoom 1
+    this.cameras.main.setZoom(1);
     this.cameras.main.setBounds(0, 0, mapSize, mapSize);
 
     this.setupCameraControls();
@@ -58,31 +57,7 @@ export class ForestScene extends Phaser.Scene {
     this.startGameLoop();
     this.sendEnvironmentData();
   }
-
-  setupCameraControls() {
-    const cam = this.cameras.main;
-
-    this.input.on('pointerdown', (pointer) => {
-      if (pointer.button === 0) {
-        this.isDragging = true;
-        this.dragStartX = pointer.x;
-        this.dragStartY = pointer.y;
-      }
-    });
-
-    this.input.on('pointermove', (pointer) => {
-      if (!this.isDragging) return;
-      cam.scrollX -= (pointer.x - this.dragStartX);
-      cam.scrollY -= (pointer.y - this.dragStartY);
-      this.dragStartX = pointer.x;
-      this.dragStartY = pointer.y;
-    });
-
-    this.input.on('pointerup', () => {
-      this.isDragging = false;
-    });
-  }
-
+//
   createTileMap() {
     const mapTiles = 62;
     const tileSize = 16;
@@ -128,71 +103,134 @@ export class ForestScene extends Phaser.Scene {
     }
   }
 
-  setupInput() {
-    this.input.on('pointerdown', (pointer) => {
-      if (pointer.button === 0 && !this.input.keyboard.addKey('SPACE').isDown && !this.isDragging) {
-        this.handleMouseClick(pointer);
+setTool(tool) {
+  console.log("ForestScene: Tool set to", tool); // <-- Thêm log
+  this.currentTool = tool;
+}
+
+
+
+setupCameraControls() {
+  const cam = this.cameras.main;
+
+  this.input.on('pointerdown', (pointer) => {
+    if (pointer.button === 0) {
+      this.dragStartX = pointer.x;
+      this.dragStartY = pointer.y;
+      this.isDragging = false; // reset lại
+    }
+  });
+
+  this.input.on('pointermove', (pointer) => {
+    if (pointer.isDown) { // ✅ CHỈ DRAG KHI ĐANG GIỮ CHUỘT
+      const dx = pointer.x - this.dragStartX;
+      const dy = pointer.y - this.dragStartY;
+
+      if (Math.abs(dx) > 5 || Math.abs(dy) > 5) {
+        this.isDragging = true;
+        cam.scrollX -= dx;
+        cam.scrollY -= dy;
+        this.dragStartX = pointer.x;
+        this.dragStartY = pointer.y;
       }
-    });
+    }
+  });
 
-    this.input.keyboard.on('keydown-ESC', () => {
-      if (this.pauseCallback) this.pauseCallback();
-    });
+  this.input.on('pointerup', (pointer) => {
+    const wasDragging = this.isDragging;
+    this.isDragging = false;
 
-    this.input.keyboard.on('keydown-ONE', () => {
-      this.currentTool = 'plant';
-    });
+    if (!wasDragging && pointer.button === 0) {
+      this.handleMouseClick(pointer); // chỉ click nếu KHÔNG drag
+    }
+  });
+}
 
-    this.input.keyboard.on('keydown-TWO', () => {
-      this.currentTool = 'water';
-    });
 
-    this.input.keyboard.on('keydown-THREE', () => {
-      this.currentTool = 'fertilize';
-    });
+setupInput() {
+  this.input.on('pointerdown', (pointer) => {
+    console.log("Pointer down", pointer.button, "Dragging:", this.isDragging); // 👈 Thêm log
+
+    if (pointer.button === 0 && !this.input.keyboard.addKey('SPACE').isDown && !this.isDragging) {
+      this.handleMouseClick(pointer);
+    }
+  });
+
+  this.input.keyboard.on('keydown-ESC', () => {
+    if (this.pauseCallback) this.pauseCallback();
+  });
+
+  this.input.keyboard.on('keydown-ONE', () => this.currentTool = 'plant');
+  this.input.keyboard.on('keydown-TWO', () => this.currentTool = 'water');
+  this.input.keyboard.on('keydown-THREE', () => this.currentTool = 'fertilize');
+}
+
+
+handleMouseClick(pointer) {
+  const worldPoint = pointer.positionToCamera(this.cameras.main);
+  const tileX = Math.floor(worldPoint.x / this.tileSize);
+  const tileY = Math.floor(worldPoint.y / this.tileSize);
+
+  console.log("Mouse click at world:", worldPoint, "=> tile:", tileX, tileY, "Current tool:", this.currentTool); // 👈
+
+  if (tileX < 0 || tileY < 0 || tileX >= 62 || tileY >= 62) return;
+
+  const tile = this.tiles[tileX][tileY];
+  console.log("Tile clicked:", tile.tileData); // 👈
+
+  if (tile.tileData.plant && tile.tileData.plant.stage === 'dead') {
+    if (tile.tileData.plant.status === 'deadtree') {
+      tile.tileData.plant.setTreeRoot();
+    } else if (tile.tileData.plant.status === 'treeroot') {
+      tile.tileData.plant.destroy();
+      tile.tileData.plant = null;
+    }
+    return;
   }
 
-  handleMouseClick(pointer) {
-    const worldPoint = pointer.positionToCamera(this.cameras.main);
-    const tileX = Math.floor(worldPoint.x / this.tileSize);
-    const tileY = Math.floor(worldPoint.y / this.tileSize);
-
-    if (tileX < 0 || tileY < 0 || tileX >= 62 || tileY >= 62) return;
-
-    const tile = this.tiles[tileX][tileY];
-
-    if (tile.tileData.plant && tile.tileData.plant.stage === 'dead') {
-      if (tile.tileData.plant.status === 'deadtree') {
-        tile.tileData.plant.setTreeRoot();
-      } else if (tile.tileData.plant.status === 'treeroot') {
-        tile.tileData.plant.destroy();
-        tile.tileData.plant = null;
-      }
-      return;
-    }
-
-    switch (this.currentTool) {
-      case 'plant': this.plantSeed(tileX, tileY); break;
-      case 'water': this.waterTile(tileX, tileY); break;
-      case 'fertilize': this.fertilizeTile(tileX, tileY); break;
-    }
+  switch (this.currentTool) {
+    case 'plant':
+      console.log("Calling plantSeed"); // 👈
+      this.plantSeed(tileX, tileY);
+      break;
+    case 'water':
+      console.log("Calling waterTile"); // 👈
+      this.waterTile(tileX, tileY);
+      break;
+    case 'fertilize':
+      console.log("Calling fertilizeTile"); // 👈
+      this.fertilizeTile(tileX, tileY);
+      break;
   }
+}
 
-  plantSeed(tileX, tileY) {
-    const tile = this.tiles[tileX][tileY];
-    if (
-      tile.tileData.type === 'dirt' &&
-      !tile.tileData.plant &&
-      !tile.tileData.isRock &&
-      tile.texture.key === 'Wheatfield' &&
-      this.gameData.energyOrbs >= 10
-    ) {
-      const plant = new Plant(this, tileX * this.tileSize + this.tileSize / 2, tileY * this.tileSize + this.tileSize / 2, 'sapling');
-      tile.tileData.plant = plant;
-      this.plants.push(plant);
-      this.updateGameData({ energyOrbs: this.gameData.energyOrbs - 10 });
-    }
+
+plantSeed(tileX, tileY) {
+  const tile = this.tiles[tileX][tileY];
+  console.log("Trying to plant at", tileX, tileY, "tileData:", tile.tileData); // 👈
+
+  if (
+    tile.tileData.type === 'dirt' &&
+    !tile.tileData.plant &&
+    !tile.tileData.isRock
+    // this.gameData.energyOrbs >= 10
+  ) {
+    console.log("Planting seed..."); // 👈
+    const plant = new Plant(
+      this,
+      tileX * this.tileSize + this.tileSize / 2,
+      tileY * this.tileSize + this.tileSize / 2,
+      'sapling'
+    );
+    tile.tileData.plant = plant;
+    this.plants.push(plant);
+    // this.updateGameData({ energyOrbs: this.gameData.energyOrbs - 10 });
+  } else {
+    console.log("Cannot plant: check tile type or conditions"); // 👈
   }
+}
+
+
 
   waterTile(tileX, tileY) {
     const tile = this.tiles[tileX][tileY];
@@ -227,7 +265,7 @@ export class ForestScene extends Phaser.Scene {
       this.environment.temperature += 0.2;
       this.environment.humidity -= 0.3;
       this.environment.pH -= 0.1;
-      this.environment.airQuality -= 0.4; // giảm dần chất lượng không khí
+      this.environment.airQuality -= 0.4;
     }
 
     if (!this.gameData) return;
@@ -245,11 +283,8 @@ export class ForestScene extends Phaser.Scene {
     let totalCarbonAbsorbed = 0;
     this.plants.forEach(plant => {
       let absorbed = plant.grow(this.environment);
-      if (RandomEventManager.getCurrentDisaster()) {
-        absorbed *= 0.6; // giảm 40% hiệu quả
-      }
+      if (disaster) absorbed *= 0.6;
       totalCarbonAbsorbed += absorbed;
-
 
       if (plant.isMature() && !plant.harvested) {
         plant.harvest();
@@ -261,9 +296,7 @@ export class ForestScene extends Phaser.Scene {
     });
 
     if (totalCarbonAbsorbed > 0) {
-      this.updateGameData({
-        co2Absorbed: this.gameData.co2Absorbed + totalCarbonAbsorbed
-      });
+      this.updateGameData({ co2Absorbed: this.gameData.co2Absorbed + totalCarbonAbsorbed });
     }
 
     const health = Math.min(100, (this.gameData.co2Absorbed / this.gameData.co2Target) * 100);
@@ -299,22 +332,16 @@ export class ForestScene extends Phaser.Scene {
       this.showDisasterNotification(event);
     }
 
-    window.dispatchEvent(new CustomEvent('dayEvent', {
-      detail: { day: currentDay, event }
-    }));
+    window.dispatchEvent(new CustomEvent('dayEvent', { detail: { day: currentDay, event } }));
   }
 
   sendEnvironmentData() {
     const env = this.environment.getEnvironmentalFactors();
-    window.dispatchEvent(new CustomEvent('environmentUpdate', {
-      detail: { environment: env }
-    }));
+    window.dispatchEvent(new CustomEvent('environmentUpdate', { detail: { environment: env } }));
   }
 
   updateGameData(data) {
-    if (this.updateCallback) {
-      this.updateCallback(data);
-    }
+    if (this.updateCallback) this.updateCallback(data);
   }
 
   update(time, delta) {

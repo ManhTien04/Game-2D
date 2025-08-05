@@ -39,6 +39,8 @@ function App() {
 
   // Khi đổi tool từ HUD, cập nhật state và gọi setTool trên GameScene
   const handleToolChange = (newTool) => {
+    console.log("App: Tool changed to", newTool); // <== Thêm dòng này
+
     setTool(newTool);
     if (gameToolSetter.current) {
       gameToolSetter.current(newTool);

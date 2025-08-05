@@ -206,10 +206,17 @@ const HUD = ({ gameData, onPause, tool, onToolChange }) => {
 
       <div className="hud-bottom">
         <div className="tool-panel">
-          <div className={`tool-item${tool === 'plant' ? ' active' : ''}`} onClick={() => onToolChange?.('plant')}>
+          <div 
+            className={`tool-item${tool === 'plant' ? ' active' : ''}`} 
+            onClick={() => {
+              console.log('HUD: Clicked plant tool');  // ✅ LOG 1
+              onToolChange?.('plant');
+            }}
+          >
             <div className="tool-icon">🌱</div>
             <div className="tool-label">Trồng cây (1)</div>
           </div>
+
           <div className={`tool-item${tool === 'water' ? ' active' : ''}`} onClick={() => onToolChange?.('water')}>
             <div className="tool-icon">💧</div>
             <div className="tool-label">Tưới nước (2)</div>

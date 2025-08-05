@@ -2,7 +2,7 @@
 class RandomEventManager {
   constructor() {
     this.lastEventDay = 0;
-    this.cooldown = 3; // số ngày tối thiểu giữa 2 thiên tai
+    this.cooldown = 5; // số ngày tối thiểu giữa 2 thiên tai
     this.activeEvent = null; // current disaster event
     this.environmentImpact = {
       temperature: 0,

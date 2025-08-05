@@ -3,12 +3,12 @@ import Phaser from 'phaser';
 import { ForestScene } from '../game/ForestScene';
 import './GameScene.css';
 
-const GameScene = ({ gameData, updateGameData, onPause, isPaused = false, onToolChange }) => {
+const GameScene = ({ gameData, updateGameData, onPause, isPaused = false, onToolChange, tool }) => {
   const gameRef = useRef(null);
   const gameInstanceRef = useRef(null);
   const [isLoading, setIsLoading] = useState(true);
 
-  // Delay hiển thị game sau loading screen
+  // Delay loading screen
   useEffect(() => {
     const timeout = setTimeout(() => {
       setIsLoading(false);
@@ -16,7 +16,7 @@ const GameScene = ({ gameData, updateGameData, onPause, isPaused = false, onTool
     return () => clearTimeout(timeout);
   }, []);
 
-  // Khởi tạo game chỉ một lần
+  // Khởi tạo game
   useEffect(() => {
     if (!isLoading && !gameInstanceRef.current) {
       const config = {
@@ -28,27 +28,29 @@ const GameScene = ({ gameData, updateGameData, onPause, isPaused = false, onTool
         pixelArt: true,
         scale: {
           mode: Phaser.Scale.FIT,
-          autoCenter: Phaser.Scale.CENTER_BOTH
+          autoCenter: Phaser.Scale.CENTER_BOTH,
         },
         physics: {
           default: 'arcade',
           arcade: {
             gravity: { y: 0 },
-            debug: false
-          }
+            debug: false,
+          },
         },
-        scene: ForestScene
+        scene: ForestScene,
       };
 
       gameInstanceRef.current = new Phaser.Game(config);
 
-      // Gửi dữ liệu vào scene sau khi đã sẵn sàng
+      // Gửi dữ liệu vào scene sau khi khởi tạo
       const checkSceneReady = setInterval(() => {
         const scene = gameInstanceRef.current?.scene.getScene('ForestScene');
         if (scene?.scene?.isActive()) {
+          console.log("GameScene: ForestScene is ready");
           scene.setGameData?.(gameData);
           scene.setUpdateCallback?.(updateGameData);
           scene.setPauseCallback?.(onPause);
+          scene.setTool?.(tool); // đảm bảo công cụ được set khi scene sẵn sàng
           clearInterval(checkSceneReady);
         }
       }, 100);
@@ -61,6 +63,14 @@ const GameScene = ({ gameData, updateGameData, onPause, isPaused = false, onTool
       }
     };
   }, [isLoading]);
+
+  // Cập nhật gameData vào scene khi dữ liệu hoặc trạng thái thay đổi
+  useEffect(() => {
+    if (!isLoading && !isPaused && gameInstanceRef.current) {
+      const scene = gameInstanceRef.current.scene.getScene('ForestScene');
+      scene?.setGameData?.(gameData);
+    }
+  }, [gameData, isPaused, isLoading]);
 
   // Xử lý pause/resume
   useEffect(() => {
@@ -76,14 +86,6 @@ const GameScene = ({ gameData, updateGameData, onPause, isPaused = false, onTool
     }
   }, [isPaused, isLoading]);
 
-  // Cập nhật gameData nếu không tạm dừng
-  useEffect(() => {
-    if (!isLoading && !isPaused && gameInstanceRef.current) {
-      const scene = gameInstanceRef.current.scene.getScene('ForestScene');
-      scene?.setGameData?.(gameData);
-    }
-  }, [gameData, isPaused, isLoading]);
-
   // ESC để tạm dừng
   useEffect(() => {
     const handleKeyDown = (e) => {
@@ -91,26 +93,33 @@ const GameScene = ({ gameData, updateGameData, onPause, isPaused = false, onTool
         const scene = gameInstanceRef.current.scene.getScene('ForestScene');
         if (scene?.pauseGame) {
           scene.pauseGame();
-          onPause?.(); // callback tạm dừng
+          onPause?.();
         }
       }
     };
-
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [isLoading, onPause]);
 
-  // Cho phép gọi setTool từ ngoài
-  const setTool = (tool) => {
-    if (gameInstanceRef.current) {
+  // Cập nhật công cụ từ HUD xuống Scene khi tool thay đổi
+  useEffect(() => {
+    if (gameInstanceRef.current && tool) {
       const scene = gameInstanceRef.current.scene.getScene('ForestScene');
+      console.log("GameScene: Setting tool to", tool);
       scene?.setTool?.(tool);
     }
-  };
+  }, [tool]);
 
+  // Gửi hàm setTool lên App để HUD sử dụng
   useEffect(() => {
-    if (onToolChange) {
+    if (onToolChange && gameInstanceRef.current) {
+      const scene = gameInstanceRef.current.scene.getScene('ForestScene');
+      const setTool = (tool) => {
+        console.log("GameScene: Tool set via onToolChange", tool);
+        scene?.setTool?.(tool);
+      };
       onToolChange(setTool);
+      console.log("GameScene: Registered tool setter");
     }
   }, [onToolChange]);
 
